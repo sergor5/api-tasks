@@ -16,7 +16,13 @@ class Api
 	{
 		self::$db = (new Database())->init();
 
-		$uri = strtolower(trim((string)$_SERVER['PATH_INFO'], '/'));
+		$uri = '';
+		if (isset($_SERVER['PATH_INFO'])) {
+			$uri = strtolower(trim((string) $_SERVER['PATH_INFO'], '/'));
+		} elseif (isset($_SERVER['REQUEST_URI'])) {
+			$uri = strtolower(trim((string) $_SERVER['REQUEST_URI'], '/'));
+		}
+
 		$httpVerb = isset($_SERVER['REQUEST_METHOD']) ? strtolower($_SERVER['REQUEST_METHOD']) : 'cli';
 
 		$wildcards = [
@@ -47,7 +53,7 @@ class Api
 
 			foreach ($routes as $pattern => $target) {
 				$pattern = str_replace(array_keys($wildcards), array_values($wildcards), $pattern);
-				if (preg_match('#^'.$pattern.'$#i', "{$httpVerb} {$uri}", $matches)) {
+				if (preg_match('#^' . $pattern . '$#i', "{$httpVerb} {$uri}", $matches)) {
 					$params = [];
 					array_shift($matches);
 					if ($httpVerb === 'post') {
@@ -60,7 +66,9 @@ class Api
 				}
 			}
 
-			echo json_encode($response, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);
+			header('Content-Type: application/json');
+
+			echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 		}
 	}
 }
