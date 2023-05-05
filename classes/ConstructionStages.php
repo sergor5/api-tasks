@@ -154,7 +154,6 @@ class ConstructionStages
 			$obj_vars = get_object_vars($data);
 
 			// remove empty fields
-
 			foreach ($obj_vars as $key => $value) {
 				if ($value === '' || $value === null) {
 					unset($obj_vars[$key]);
@@ -185,8 +184,11 @@ class ConstructionStages
 
 			$stmt->execute($data);
 
-			return $this->getSingle($id);
-
+			$result = $this->getSingle($id);
+			if (!empty($result))
+				return $result;
+			else
+				return ["code" => 404, "status" => "error", "message" => "Row not found"];
 		}
 
 	}
