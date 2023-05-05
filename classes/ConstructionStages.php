@@ -50,22 +50,40 @@ class ConstructionStages
 
 	public function post(ConstructionStagesCreate $data)
 	{
-		$stmt = $this->db->prepare("
+		$rules = [
+			'name' => array('required', 'maxlen:255'),
+			'startDate' => array('required'),
+			'endDate' => array('required'),
+			'durationUnit' => array('required'),
+			'color' => array('required'),
+			'externalId' => array('maxlen:255'),
+			'status' => array('required'),
+		];
+
+		$validator = new Validator(get_object_vars($data), $rules);
+
+		if ($validator->validate() === false) {
+			return ["code" => 400, "message" => "Bad Request", "errors" => $validator->getErrors()];
+		} else {
+			$stmt = $this->db->prepare("
 			INSERT INTO construction_stages
 			    (name, start_date, end_date, duration, durationUnit, color, externalId, status)
 			    VALUES (:name, :start_date, :end_date, :duration, :durationUnit, :color, :externalId, :status)
 			");
-		$stmt->execute([
-			'name' => $data->name,
-			'start_date' => $data->startDate,
-			'end_date' => $data->endDate,
-			'duration' => $data->duration,
-			'durationUnit' => $data->durationUnit,
-			'color' => $data->color,
-			'externalId' => $data->externalId,
-			'status' => $data->status,
-		]);
-		return $this->getSingle($this->db->lastInsertId());
+			$stmt->execute([
+				'name' => $data->name,
+				'start_date' => $data->startDate,
+				'end_date' => $data->endDate,
+				'duration' => $data->duration,
+				'durationUnit' => $data->durationUnit,
+				'color' => $data->color,
+				'externalId' => $data->externalId,
+				'status' => $data->status,
+			]);
+			return $this->getSingle($this->db->lastInsertId());
+		}
+
+
 	}
 
 	public function patch(ConstructionStagesPatch $data, $id)
