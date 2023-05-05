@@ -23,6 +23,7 @@ class Validator
             $value = $this->data[$field];
             foreach ($rules as $rule) {
                 $valid = true;
+                $params = [];
                 $params["field"] = $field;
                 $params["value"] = $value;
 
@@ -53,3 +54,4 @@ class Validator
 require_once 'validators/required.php';
 require_once 'validators/minlen.php';
 require_once 'validators/maxlen.php';
+require_once 'validators/date.php';
