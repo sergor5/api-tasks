@@ -1,5 +1,19 @@
 <?php
 
+require __DIR__ . '/../helpers/calc_duration.php';
+
+/** 
+ * Name: Construction Stages Class
+ * Description: This class is used to handle all construction stages related requests.
+ * @property PDO $db The database connection
+ * 
+ * @method array getAll() Get all construction stages
+ * @method object getSingle($id) Get a single construction stage
+ * @method object create($data) Create a new construction stage
+ * @method object update($id, $data) Update a construction stage
+ * @method object delete($id) Delete a construction stage
+ * 
+ */
 class ConstructionStages
 {
 	private $db;
@@ -47,7 +61,6 @@ class ConstructionStages
 		$stmt->execute(['id' => $id]);
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 	}
-
 	public function post(ConstructionStagesCreate $data)
 	{
 		$rules = [
@@ -62,27 +75,6 @@ class ConstructionStages
 
 		$validator = new Validator(get_object_vars($data), $rules);
 
-		$calc_duration = function ($data) {
-			if (isset($data->startDate) && isset($data->endDate)) {
-				$startDate = new DateTime($data->startDate);
-				$endDate = new DateTime($data->endDate);
-				$interval = $endDate->diff($startDate);
-
-				switch ($data->durationUnit) {
-					case 'HOURS':
-						return $interval->d * 24 + $interval->h;
-					case 'DAYS':
-						return $interval->d;
-					case 'WEEKS':
-						return ceil($interval->d / 7);
-
-				}
-			} else {
-				return NULL;
-			}
-		};
-
-
 		$defaults = [
 			'duration' => NULL,
 			'durationUnit' => 'DAYS',
@@ -92,7 +84,7 @@ class ConstructionStages
 		$data = array_merge($defaults, get_object_vars($data));
 		$data = (object) $data;
 
-		$data->duration = $calc_duration($data);
+		$data->duration = calc_duration($data->startDate, $data->endDate, $data->durationUnit);
 
 		if ($validator->validate() === false) {
 			return ["code" => 400, "message" => "Bad Request", "errors" => $validator->getErrors()];
@@ -118,55 +110,84 @@ class ConstructionStages
 
 	public function patch(ConstructionStagesPatch $data, $id)
 	{
-		if (empty($data))
-			throw new Exception('No data to update');
 
-		$allowedFields = [
-			'name',
-			'start_date',
-			'end_date',
-			'duration',
-			'durationUnit',
-			'color',
-			'externalId',
-			'status'
+		$rules = [
+			'name' => array('maxlen:255'),
+			'startDate' => array('date'),
+			'endDate' => array('date_after:$startDate'),
+			'durationUnit' => array('enum:HOURS,DAYS,WEEKS'),
+			'color' => array('hex'),
+			'externalId' => array('maxlen:255'),
+			'status' => array('enum:NEW,PLANNED,DELETED'),
 		];
 
-		$obj_vars = get_object_vars($data);
+		$validator = new Validator(get_object_vars($data), $rules);
 
-		// remove empty fields
+		$defaults = [
+			'duration' => NULL,
+			'durationUnit' => 'DAYS',
+			'status' => 'NEW',
+		];
 
-		foreach ($obj_vars as $key => $value) {
-			if ($value === '' || $value === null) {
-				unset($obj_vars[$key]);
+		$data = array_merge($defaults, get_object_vars($data));
+		$data = (object) $data;
+
+		$data->duration = calc_duration($data->startDate, $data->endDate, $data->durationUnit);
+
+		if ($validator->validate() === false) {
+			return ["code" => 400, "message" => "Bad Request", "errors" => $validator->getErrors()];
+		} else {
+			if (empty($data))
+				throw new Exception('No data to update');
+
+			$allowedFields = [
+				'name',
+				'start_date',
+				'end_date',
+				'duration',
+				'durationUnit',
+				'color',
+				'externalId',
+				'status'
+			];
+
+			$obj_vars = get_object_vars($data);
+
+			// remove empty fields
+
+			foreach ($obj_vars as $key => $value) {
+				if ($value === '' || $value === null) {
+					unset($obj_vars[$key]);
+				}
 			}
+
+			$data = array_intersect_key($obj_vars, array_flip($allowedFields));
+
+
+			if (isset($data['status']) && !in_array($data['status'], ['NEW', 'PLANNED', 'DELETED']))
+				throw new Exception('Invalid status');
+
+			// build query
+			$query = "UPDATE construction_stages SET ";
+
+			// add fields to query for the statement
+			foreach ($data as $key => $value) {
+				$query .= $key . ' = :' . $key . ', ';
+			}
+
+			// remove last comma
+			$query = rtrim($query, ', ');
+
+			$query .= " WHERE ID = :id";
+
+			$stmt = $this->db->prepare($query);
+			$data["id"] = $id;
+
+			$stmt->execute($data);
+
+			return $this->getSingle($id);
+
 		}
-
-		$data = array_intersect_key($obj_vars, array_flip($allowedFields));
-
-
-		if (isset($data['status']) && !in_array($data['status'], ['NEW', 'PLANNED', 'DELETED']))
-			throw new Exception('Invalid status');
-
-		// build query
-		$query = "UPDATE construction_stages SET ";
-
-		// add fields to query for the statement
-		foreach ($data as $key => $value) {
-			$query .= $key . ' = :' . $key . ', ';
-		}
-
-		// remove last comma
-		$query = rtrim($query, ', ');
-
-		$query .= " WHERE ID = :id";
-
-		$stmt = $this->db->prepare($query);
-		$data["id"] = $id;
-
-		$stmt->execute($data);
-
-		return $this->getSingle($id);
 
 	}
 

@@ -1,7 +1,13 @@
 <?php
+/** 
+ * Name: Date After Validator
+ * Description: This function is used to validate that a field is a date string in ISO 8601 format with a UTC time zone indicator (YYYY-MM-DDTHH:MM:SSZ) and is after a specified date. 
+ * @param string $field The name of the field being validated
+ * @param string $value The value of the field being validated
+ * @param number $validation_param The date that the field must be after
+ */
 function validate_date_after($field, $value, $validation_param)
 {
-    echo "validate_date_after";
     if ($value !== '') {
         if ($value == null)
             return true;

@@ -1,4 +1,18 @@
 <?php
+/** 
+ * Name: Validator Class
+ * Description: This class is used to validate data based on a set of rules.
+ * @param array $data The data to be validated
+ * @param array $rules The rules to be used for validation
+ * 
+ * @property array $data The data to be validated
+ * @property array $rules The rules to be used for validation
+ * @property array $errors The errors that occurred during validation
+ * 
+ * @method array getErrors() Returns the errors that occurred during validation
+ * @method bool validate() Validates the data based on the rules
+ * 
+ */
 class Validator
 {
     private $data;
@@ -54,10 +68,7 @@ class Validator
     }
 }
 
-require_once 'validators/required.php';
-require_once 'validators/minlen.php';
-require_once 'validators/maxlen.php';
-require_once 'validators/date.php';
-require_once 'validators/date_after.php';
-require_once 'validators/hex.php';
-require_once 'validators/enum.php';
+//import all the rules
+foreach (glob(__DIR__ . '/../utils/validation/rules/*.php') as $filename) {
+    require_once $filename;
+}

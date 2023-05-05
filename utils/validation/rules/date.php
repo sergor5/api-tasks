@@ -1,4 +1,11 @@
 <?php
+/** 
+ * Name: Date Validator
+ * Description: This function is used to validate that a field is a date string in ISO 8601 format with a UTC time zone indicator (YYYY-MM-DDTHH:MM:SSZ).
+ * @param string $field The name of the field being validated
+ * @param string $value The value of the field being validated
+ */
+
 function validate_date($field, $value)
 {
     if ($value == null)
