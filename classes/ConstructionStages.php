@@ -52,15 +52,47 @@ class ConstructionStages
 	{
 		$rules = [
 			'name' => array('required', 'maxlen:255'),
-			'startDate' => array('required'),
-			'endDate' => array('required'),
-			'durationUnit' => array('required'),
-			'color' => array('required'),
+			'startDate' => array('required', 'date'),
+			'endDate' => array('date_after:$startDate'),
+			'durationUnit' => array('enum:HOURS,DAYS,WEEKS'),
+			'color' => array('hex'),
 			'externalId' => array('maxlen:255'),
-			'status' => array('required'),
+			'status' => array('enum:NEW,PLANNED,DELETED'),
 		];
 
 		$validator = new Validator(get_object_vars($data), $rules);
+
+		$calc_duration = function ($data) {
+			if (isset($data->startDate) && isset($data->endDate)) {
+				$startDate = new DateTime($data->startDate);
+				$endDate = new DateTime($data->endDate);
+				$interval = $endDate->diff($startDate);
+
+				switch ($data->durationUnit) {
+					case 'HOURS':
+						return $interval->d * 24 + $interval->h;
+					case 'DAYS':
+						return $interval->d;
+					case 'WEEKS':
+						return ceil($interval->d / 7);
+
+				}
+			} else {
+				return NULL;
+			}
+		};
+
+
+		$defaults = [
+			'duration' => NULL,
+			'durationUnit' => 'DAYS',
+			'status' => 'NEW',
+		];
+
+		$data = array_merge($defaults, get_object_vars($data));
+		$data = (object) $data;
+
+		$data->duration = $calc_duration($data);
 
 		if ($validator->validate() === false) {
 			return ["code" => 400, "message" => "Bad Request", "errors" => $validator->getErrors()];
@@ -82,8 +114,6 @@ class ConstructionStages
 			]);
 			return $this->getSingle($this->db->lastInsertId());
 		}
-
-
 	}
 
 	public function patch(ConstructionStagesPatch $data, $id)
